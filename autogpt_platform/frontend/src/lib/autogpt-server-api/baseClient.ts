@@ -16,6 +16,9 @@ import {
   NodeExecutionResult,
   OAuth2Credentials,
   User,
+  APIKeyPermission,
+  CreateAPIKeyResponse,
+  APIKey,
 } from "./types";
 
 export default class BaseAutoGPTServerAPI {
@@ -238,6 +241,36 @@ export default class BaseAutoGPTServerAPI {
     return this._request("GET", path, query);
   }
 
+  // API KeY related requests
+  async createAPIKey(
+    name: string,
+    permissions: APIKeyPermission[],
+    description?: string,
+  ): Promise<CreateAPIKeyResponse> {
+    return this._request("POST", "/api-keys", {
+      name,
+      permissions,
+      description,
+    });
+  }
+
+  async listAPIKeys(): Promise<APIKey[]> {
+    return this._get("/api-keys");
+  }
+
+  async revokeAPIKey(keyId: string): Promise<APIKey> {
+    return this._request("DELETE", `/api-keys/${keyId}`);
+  }
+
+  async updateAPIKeyPermissions(
+    keyId: string,
+    permissions: APIKeyPermission[],
+  ): Promise<APIKey> {
+    return this._request("PUT", `/api-keys/${keyId}/permissions`, {
+      permissions,
+    });
+  }
+
   private async _request(
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
     path: string,
@@ -250,6 +283,8 @@ export default class BaseAutoGPTServerAPI {
     const token =
       (await this.supabaseClient?.auth.getSession())?.data.session
         ?.access_token || "";
+
+    console.log("token", token);
 
     let url = this.baseUrl + path;
     if (method === "GET" && payload) {
