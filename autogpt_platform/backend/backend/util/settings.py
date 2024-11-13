@@ -268,6 +268,8 @@ class Secrets(UpdateTrackingModel["Secrets"], BaseSettings):
     ideogram_api_key: str = Field(default="", description="Ideogram API Key")
     jina_api_key: str = Field(default="", description="Jina API Key")
 
+    fal_key: str = Field(default="", description="FAL API key")
+
     # Add more secret fields as needed
 
     model_config = SettingsConfigDict(

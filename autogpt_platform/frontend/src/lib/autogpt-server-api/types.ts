@@ -114,6 +114,7 @@ export const PROVIDER_NAMES = {
   OPENWEATHERMAP: "openweathermap",
   PINECONE: "pinecone",
   REPLICATE: "replicate",
+  FAL: "fal",
   REVID: "revid",
   UNREAL_SPEECH: "unreal_speech",
 } as const;
