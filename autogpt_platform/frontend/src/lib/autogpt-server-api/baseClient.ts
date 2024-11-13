@@ -15,7 +15,15 @@ import {
   ExecutionMeta,
   NodeExecutionResult,
   OAuth2Credentials,
+  ProfileDetails,
   User,
+  StoreAgentsResponse,
+  StoreAgentDetails,
+  CreatorsResponse,
+  CreatorDetails,
+  StoreSubmissionsResponse,
+  StoreSubmissionRequest,
+  StoreSubmission,
 } from "./types";
 
 export default class BaseAutoGPTServerAPI {
@@ -28,7 +36,7 @@ export default class BaseAutoGPTServerAPI {
 
   constructor(
     baseUrl: string = process.env.NEXT_PUBLIC_AGPT_SERVER_URL ||
-      "http://localhost:8006/api/v1",
+      "http://localhost:8006/api/",
     wsUrl: string = process.env.NEXT_PUBLIC_AGPT_WS_SERVER_URL ||
       "ws://localhost:8001/ws",
     supabaseClient: SupabaseClient | null = null,
@@ -51,7 +59,11 @@ export default class BaseAutoGPTServerAPI {
   }
 
   getUserCredit(): Promise<{ credits: number }> {
-    return this._get(`/credits`);
+    try {
+      return this._get(`/credits`);
+    } catch (error) {
+      return Promise.resolve({ credits: 0 });
+    }
   }
 
   getBlocks(): Promise<Block[]> {
@@ -234,6 +246,79 @@ export default class BaseAutoGPTServerAPI {
     return this._request("POST", "/analytics/log_raw_analytics", analytic);
   }
 
+  ///////////////////////////////////////////
+  /////////// V2 STORE API /////////////////
+  /////////////////////////////////////////
+
+  getStoreProfile(): Promise<ProfileDetails | null> {
+    try {
+      return this._get("/store/profile");
+    } catch (error) {
+      console.error("Error fetching store profile:", error);
+      return Promise.resolve(null);
+    }
+  }
+
+  getStoreAgents(params?: {
+    featured?: boolean;
+    creator?: string;
+    sorted_by?: string;
+    search_query?: string;
+    category?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<StoreAgentsResponse> {
+    return this._get("/store/agents", params);
+  }
+
+  getStoreAgent(
+    username: string,
+    agentName: string,
+  ): Promise<StoreAgentDetails> {
+    return this._get(`/store/agents/${username}/${agentName}`);
+  }
+
+  getStoreCreators(params?: {
+    featured?: boolean;
+    search_query?: string;
+    sorted_by?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<CreatorsResponse> {
+    return this._get("/store/creators", params);
+  }
+
+  getStoreCreator(username: string): Promise<CreatorDetails> {
+    return this._get(`/store/creator/${username}`);
+  }
+
+  getStoreSubmissions(params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<StoreSubmissionsResponse> {
+    return this._get("/store/submissions", params);
+  }
+
+  createStoreSubmission(
+    submission: StoreSubmissionRequest,
+  ): Promise<StoreSubmission> {
+    return this._request("POST", "/store/submissions", submission);
+  }
+
+  uploadStoreSubmissionMedia(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return this._request("POST", "/store/submissions/media", formData);
+  }
+
+  updateStoreProfile(profile: CreatorDetails): Promise<CreatorDetails> {
+    return this._request("PUT", "/store/profile", profile);
+  }
+
+  ///////////////////////////////////////////
+  /////////// INTERNAL FUNCTIONS ////////////
+  //////////////////////////////??///////////
+
   private async _get(path: string, query?: Record<string, any>) {
     return this._request("GET", path, query);
   }
@@ -249,7 +334,9 @@ export default class BaseAutoGPTServerAPI {
 
     const token =
       (await this.supabaseClient?.auth.getSession())?.data.session
-        ?.access_token || "";
+        ?.access_token || "no-token-found";
+
+    console.log("Request: ", method, path);
 
     let url = this.baseUrl + path;
     if (method === "GET" && payload) {
@@ -271,13 +358,14 @@ export default class BaseAutoGPTServerAPI {
     if (!response.ok) {
       console.warn(`${method} ${path} returned non-OK response:`, response);
 
-      if (
-        response.status === 403 &&
-        typeof window !== "undefined" // Check if in browser environment
-      ) {
-        window.location.href = "/login";
-        return null;
-      }
+      // console.warn("baseClient is attempting to redirect by changing window location")
+      // if (
+      //   response.status === 403 &&
+      //   response.statusText === "Not authenticated" &&
+      //   typeof window !== "undefined" // Check if in browser environment
+      // ) {
+      //   window.location.href = "/login";
+      // }
 
       let errorDetail;
       try {

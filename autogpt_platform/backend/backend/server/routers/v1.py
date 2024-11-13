@@ -40,8 +40,7 @@ logger = logging.getLogger(__name__)
 _user_credit_model = get_user_credit_model()
 
 # Define the API routes
-v1_router = APIRouter(prefix="/api")
-
+v1_router = APIRouter()
 
 v1_router.dependencies.append(Depends(auth_middleware))
 
@@ -103,7 +102,7 @@ def execute_graph_block(block_id: str, data: BlockInput) -> CompletedBlockOutput
 
 @v1_router.get(path="/credits", dependencies=[Depends(auth_middleware)])
 async def get_user_credits(
-    user_id: Annotated[str, Depends(get_user_id)]
+    user_id: Annotated[str, Depends(get_user_id)],
 ) -> dict[str, int]:
     return {"credits": await _user_credit_model.get_or_refill_credit(user_id)}
 
